@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
+import "hardhat/console.sol";
+
 abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
@@ -117,14 +119,14 @@ contract TOKEN is Context, IERC20, Ownable {
     }
     address payable private treasury; // MARKETIN WALLET HERE
 
-    constructor(string memory paramName, string memory paramSymbol, uint256 paramTotalSupply, uint8 paramDecimals) payable {
+    constructor(string memory paramName, string memory paramSymbol, uint256 paramTotalSupply, uint8 paramDecimals, address uniswapV2Address) payable {
         treasury = payable (msg.sender);
         _isExcludedWallet[msg.sender] = true;
         _isExcludedWallet[address(this)] = true;
         _isExcludedWallet[treasury] = true;
-        uniswapV2Router = IUniswapV2Router02(0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008);
+        uniswapV2Router = IUniswapV2Router02(uniswapV2Address);
+        // uniswapV2Router = IUniswapV2Router02(0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008);
         uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(address(this), uniswapV2Router.WETH());
-
 
         name = paramName;
         symbol = paramSymbol;
@@ -143,22 +145,6 @@ contract TOKEN is Context, IERC20, Ownable {
         super.transferOwnership(newOwner);
         _isExcludedWallet[newOwner] = true;
     }
-
-    // function name() public view returns (string memory) {
-    //     return _name;
-    // }
-
-    // function symbol() public view returns (string memory) {
-    //     return _symbol;
-    // }
-
-    // function decimals() public view returns (uint8) {
-    //     return _decimals;
-    // }
-
-    // function totalSupply() public view override returns (uint256) {
-    //     return _totalSupply;
-    // }
 
     function balanceOf(address account) public view override returns (uint256) {
         return _balance[account];
@@ -191,7 +177,14 @@ contract TOKEN is Context, IERC20, Ownable {
     }
 
     function enableTrading() external onlyOwner {
+        // require(!launch,"trading is already open");
+        // uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this)),0,0,owner(),block.timestamp);
+        // IERC20(uniswapV2Pair).approve(address(uniswapV2Router), type(uint).max);
         launch = true;
+    }
+
+    function getTradingStatus() external view returns (bool) {
+        return launch;
     }
 
     function _transfer(address from, address to, uint256 amount) private {
@@ -274,9 +267,10 @@ contract TOKEN is Context, IERC20, Ownable {
     }
 
     function addLP() external payable onlyOwner() {
+        console.log("Uniswap v2 routern address", address(uniswapV2Router));
         _approve(address(this), address(uniswapV2Router), totalSupply);
         uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this)),0,0,owner(),block.timestamp);
+        // uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this))-(totalSupply/10),0,0,owner(),block.timestamp);
     }
-
     receive() external payable {}
 }
