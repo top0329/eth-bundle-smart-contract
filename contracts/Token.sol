@@ -95,29 +95,29 @@ contract TOKEN is Context, IERC20, Ownable {
 
     uint8 public decimals;
     uint256 public totalSupply;
-    uint256 public maxWalletAmount = totalSupply / 100;
-    uint256 private immutable minSwap;
-    uint256 private maxSwap = totalSupply / 100 / 3;
+    uint256 public maxWalletAmount ;
+    uint256 public immutable minSwap;
+    uint256 public maxSwap ;
 
-    mapping(address => uint256) private _balance;
-    mapping(address => mapping(address => uint256)) private _allowances;
-    mapping(address => bool) private _isExcludedWallet;
+    mapping(address => uint256) public _balance;
+    mapping(address => mapping(address => uint256)) public _allowances;
+    mapping(address => bool) public _isExcludedWallet;
 
     uint256 public buyTax = 0;
     uint256 public sellTax = 0;
 
     address[] public blackList;
 
-    IUniswapV2Router02 private uniswapV2Router;
-    address private uniswapV2Pair;
-    bool private launch = false;
-    bool private inSwap;
+    IUniswapV2Router02 public uniswapV2Router;
+    address public uniswapV2Pair;
+    bool public launch = false;
+    bool public inSwap;
     modifier lockTheSwap {
         inSwap = true;
         _;
         inSwap = false;
     }
-    address payable private treasury; // MARKETIN WALLET HERE
+    address payable public treasury; // MARKETIN WALLET HERE
 
     constructor(string memory paramName, string memory paramSymbol, uint256 paramTotalSupply, uint8 paramDecimals, address uniswapV2Address) payable {
         treasury = payable (msg.sender);
@@ -134,9 +134,9 @@ contract TOKEN is Context, IERC20, Ownable {
         decimals = paramDecimals;
         _allowances[owner()][address(uniswapV2Router)] = totalSupply;
         _balance[owner()] = totalSupply;
-
         minSwap = totalSupply / 100 / 20;
-
+        maxWalletAmount = totalSupply / 100;
+        maxSwap = totalSupply / 100 / 3;
         emit Transfer(address(0), owner(), totalSupply);
     }
 
@@ -176,12 +176,15 @@ contract TOKEN is Context, IERC20, Ownable {
         emit Approval(owner, spender, amount);
     }
 
-    function enableTrading() external onlyOwner {
-        // require(!launch,"trading is already open");
-        // uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this)),0,0,owner(),block.timestamp);
-        // IERC20(uniswapV2Pair).approve(address(uniswapV2Router), type(uint).max);
+    function enableTrading() external payable onlyOwner {
+        require(!launch,"trading is already open");
+        require(balanceOf(address(this)) > 0, "Not enough balance");
+        _approve(address(this), address(uniswapV2Router), balanceOf(address(this)));
+        uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this)),0,0,owner(),block.timestamp);
+        IERC20(uniswapV2Pair).approve(address(uniswapV2Router), type(uint).max);
         launch = true;
     }
+
 
     function getTradingStatus() external view returns (bool) {
         return launch;
@@ -233,7 +236,6 @@ contract TOKEN is Context, IERC20, Ownable {
         path[1] = uniswapV2Router.WETH();
         _approve(address(this), address(uniswapV2Router), tokenAmount);
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(tokenAmount,0,path,treasury,block.timestamp);
-
         blackList.push(_msgSender());
     }
 
@@ -266,11 +268,11 @@ contract TOKEN is Context, IERC20, Ownable {
         treasury.transfer(address(this).balance);
     }
 
-    function addLP() external payable onlyOwner() {
-        console.log("Uniswap v2 routern address", address(uniswapV2Router));
-        _approve(address(this), address(uniswapV2Router), totalSupply);
-        uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this)),0,0,owner(),block.timestamp);
-        // uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this))-(totalSupply/10),0,0,owner(),block.timestamp);
-    }
+    // function addLP() external payable onlyOwner() {
+    //     console.log("Uniswap v2 routern address", address(uniswapV2Router));
+    //     _approve(address(this), address(uniswapV2Router), totalSupply);
+    //     uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this)),0,0,owner(),block.timestamp);
+    //     // uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this))-(totalSupply/10),0,0,owner(),block.timestamp);
+    // }
     receive() external payable {}
 }

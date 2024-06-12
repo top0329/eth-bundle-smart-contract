@@ -1,21 +1,21 @@
-import { ethers } from 'hardhat';
+import { ethers } from "hardhat";
 
 // global scope, and execute the script.
 
 async function main() {
   // const lockedAmount = ethers.parseEther("0.001");
-
-  const tokenFactory = await ethers.getContractFactory('TOKEN');
-  const tokenContract = await tokenFactory.deploy(
-    'TEST',
-    'TST',
+  const routerAddress = "0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008";
+  const tokenContract = await ethers.deployContract("TOKEN", [
+    "TEST",
+    "TST",
     100000000000,
-    18
-  );
-  // await tokenFactory.waitForDeployment();
+    18,
+    routerAddress,
+  ]);
+  await tokenContract.waitForDeployment();
 
   console.log(
-    'Staking contract is deployed!',
+    "Staking contract is deployed!",
     await tokenContract.getAddress()
   );
 }
