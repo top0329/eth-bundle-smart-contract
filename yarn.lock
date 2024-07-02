@@ -2231,7 +2231,7 @@ handlebars@^4.0.1:
   optionalDependencies:
     uglify-js "^3.1.4"
 
-hardhat-gas-reporter@^1.0.8:
+hardhat-gas-reporter@^1.0.10, hardhat-gas-reporter@^1.0.8:
   version "1.0.10"
   resolved "https://registry.npmjs.org/hardhat-gas-reporter/-/hardhat-gas-reporter-1.0.10.tgz"
   integrity sha512-02N4+So/fZrzJ88ci54GqwVA3Zrf0C9duuTyGt0CFRIh/CdNwbnTgkXkRfojOMLBQ+6t+lBIkgbsOtqMvNwikA==

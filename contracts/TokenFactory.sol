@@ -5,7 +5,6 @@ import "./Token.sol";
 import "hardhat/console.sol";
 
 contract TokenFactory {
-    address public devTokenContractAddress;
     event TokenCreated(
         address indexed tokenAddress,
         string name,
@@ -20,13 +19,10 @@ contract TokenFactory {
         string memory _symbol,
         uint256 _totalSupply,
         uint8 _decimals,
-        address creator,
-        address uniswapV2Address
+        address creator
     ) public {
-        TOKEN newToken = new TOKEN(_name, _symbol, _totalSupply, _decimals, uniswapV2Address);
+        TOKEN newToken = new TOKEN(_name, _symbol, _totalSupply, _decimals, creator);
         newToken.transferOwnership(creator);
-        console.log("New Token address:", address(newToken));
-        devTokenContractAddress = address(newToken);
         emit TokenCreated(
             address(newToken),
             _name,
